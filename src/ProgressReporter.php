@@ -87,6 +87,8 @@ class ProgressReporter
      */
     private $indent = 4;
 
+    private $only_cli = true;
+
     /**
      * Initializes the reporter with the total number of operations
      * and an optional description about the task.
@@ -117,6 +119,10 @@ class ProgressReporter
      */
     public function report()
     {
+        if ($this->only_cli && PHP_SAPI !== 'cli') {
+            return;
+        }
+
         $this->current++;
 
         if ($this->current % $this->interval === 0) {
@@ -133,9 +139,24 @@ class ProgressReporter
      */
     public function finish()
     {
+        if ($this->only_cli && PHP_SAPI !== 'cli') {
+            return;
+        }
+
         $this->update();
         $this->render();
         echo PHP_EOL;
+    }
+
+    /**
+     * Determines if the reporter only works on cli.
+     * True by default.
+     *
+     * @param boolean $value
+     */
+    public function onlyCli($value = true)
+    {
+        $this->only_cli = $value;
     }
 
     private function update()
