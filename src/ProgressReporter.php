@@ -164,7 +164,11 @@ class ProgressReporter
 
     private function getProgress()
     {
-        $percent_done = floor($this->current * 100 / $this->total);
+        if ($this->total > 0) {
+            $percent_done = floor($this->current * 100 / $this->total);
+        } else {
+            $percent_done = 0;
+        }
 
         $done_chars = ceil($percent_done * $this->width / 100);
         $undone_chars = $this->width - $done_chars;
