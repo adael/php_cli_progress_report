@@ -1,5 +1,5 @@
 {
-    "name": "carlos/php_cli_progress_report",
+    "name": "adael/php_cli_progress_report",
     "description": "Shows a progress bar in PHP",
     "type": "library",
     "license": "MIT",
