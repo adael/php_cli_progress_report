@@ -28,6 +28,18 @@ class ProgressReporter
     private $start;
 
     /**
+     * Start time for calculate ops
+     * @var int
+     */
+    private $ops_start;
+
+    /**
+     * Calculate ops within N seconds
+     * @var integer in seconds
+     */
+    private $ops_threshold = 30;
+
+    /**
      * Elapsed time
      * @var integer
      */
@@ -99,6 +111,7 @@ class ProgressReporter
     public function __construct($total, $desc = "")
     {
         $this->start = microtime(true);
+        $this->ops_start = microtime(true);
         $this->total = $total;
         $this->desc = $desc;
         $this->current = 0;
@@ -116,11 +129,16 @@ class ProgressReporter
 
     /**
      * Updates and render the progress bar
+     * @param string $desc updates the description of the task
      */
-    public function report()
+    public function report($desc = null)
     {
         if ($this->only_cli && PHP_SAPI !== 'cli') {
             return;
+        }
+
+        if ($desc) {
+            $this->desc = $desc;
         }
 
         $this->current++;
@@ -162,9 +180,14 @@ class ProgressReporter
     private function update()
     {
         $this->elapsed = (microtime(true) - $this->start);
+        $this->ops_elapsed = (microtime(true) - $this->ops_start);
 
-        if ($this->elapsed > 0) {
-            $this->ops = floor($this->current / $this->elapsed);
+        if ($this->microToSeconds($this->ops_elapsed) > $this->ops_threshold) {
+            $this->ops_start = microtime(true);
+        }
+
+        if ($this->ops_elapsed > 0) {
+            $this->ops = round($this->current / $this->ops_elapsed, 3);
         }
     }
 
@@ -186,13 +209,13 @@ class ProgressReporter
     private function getProgress()
     {
         if ($this->total > 0) {
-            $percent_done = floor($this->current * 100 / $this->total);
+            $percent_done = round($this->current * 100 / $this->total, 3);
         } else {
             $percent_done = 0;
         }
 
-        $done_chars = ceil($percent_done * $this->width / 100);
-        $undone_chars = $this->width - $done_chars;
+        $done_chars = min(100, floor($percent_done * $this->width / 100));
+        $undone_chars = max(0, $this->width - $done_chars);
 
         $bar = str_repeat("#", $done_chars) . str_repeat(".", $undone_chars);
 
@@ -209,6 +232,11 @@ class ProgressReporter
     private function getEstimatedTime()
     {
         return " ETA: " . gmdate("H:i:s", ceil(($this->total - $this->current) / $this->ops));
+    }
+
+    private function microToSeconds($microseconds)
+    {
+        return $microseconds / 1000000;
     }
 
 }
