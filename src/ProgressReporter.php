@@ -34,6 +34,12 @@ class ProgressReporter
     private $ops_start;
 
     /**
+     * Current operation within ops threshold
+     * @var int
+     */
+    private $ops_current = 0;
+
+    /**
      * Calculate ops within N seconds
      * @var integer in seconds
      */
@@ -142,6 +148,7 @@ class ProgressReporter
         }
 
         $this->current++;
+        $this->ops_current++;
 
         if ($this->current % $this->interval === 0) {
             $this->update();
@@ -184,10 +191,11 @@ class ProgressReporter
 
         if ($this->microToSeconds($this->ops_elapsed) > $this->ops_threshold) {
             $this->ops_start = microtime(true);
+            $this->ops_current = 0;
         }
 
         if ($this->ops_elapsed > 0) {
-            $this->ops = round($this->current / $this->ops_elapsed, 3);
+            $this->ops = round($this->ops_current / $this->ops_elapsed, 3);
         }
     }
 
