@@ -9,19 +9,20 @@ require dirname(__DIR__) . "/src/ProgressReporter.php";
 
 echo "Starting tasks..." . PHP_EOL;
 
-for ($i = 1; $i <= 10; $i++) {
+for ($i = 1; $i <= 5; $i++) {
 
     $items = range(1, rand(1000, 3000));
 
     // Setups the reporter
     $report = new ProgressReporter(count($items), "Doing task $i");
+
     // reports each 100 iterations
-    $report->interval(50);
+    $report->timeout(250);
 
     foreach ($items as $item) {
         // Report!, that's it
         $report->report();
-        usleep(1000);
+        usleep(rand(100, 2000));
     }
 
     // don't forget to call finish at the end, altough is not very important

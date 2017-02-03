@@ -11,7 +11,7 @@ namespace Adael\ProgressReporter;
  *
  *     $items = range(1, 100);
  *     $report = new ProgressReporter(count($items), "Doing something");
- *     $report->interval(1); // reports each iteration
+ *     $report->timeout(100); // reports each 100 ms
  *     foreach($items as $item){
  *         $report->report();
  *         usleep(10000);
@@ -20,6 +20,9 @@ namespace Adael\ProgressReporter;
  */
 class ProgressReporter
 {
+
+    const MILLISECONDS_PER_SECOND = 1000;
+    const MICROSECONDS_PER_SECOND = 1000000;
 
     /**
      * Start time
@@ -88,6 +91,12 @@ class ProgressReporter
     private $interval = 1;
 
     /**
+     * Sets the time interval for each output progress. In milliseconds
+     * @var int
+     */
+    private $timeout = 250;
+
+    /**
      * Character for carriage return
      * @var string
      */
@@ -105,7 +114,17 @@ class ProgressReporter
      */
     private $indent = 4;
 
+    /**
+     * If true the reporter only outputs if is executed in cli
+     * @var boolean
+     */
     private $only_cli = true;
+
+    /**
+     * Holds the elapsed time for timeout calculations.
+     * @var int
+     */
+    private $timeout_start;
 
     /**
      * Initializes the reporter with the total number of operations
@@ -134,15 +153,22 @@ class ProgressReporter
     }
 
     /**
+     * Sets the the update timeout.
+     * If set, the reporter will output at the desired interval of time
+     *
+     * @param int $timeout in milliseconds
+     */
+    public function timeout($timeout)
+    {
+        $this->timeout = $timeout / self::MILLISECONDS_PER_SECOND;
+    }
+
+    /**
      * Updates and render the progress bar
      * @param string $desc updates the description of the task
      */
     public function report($desc = null)
     {
-        if ($this->only_cli && PHP_SAPI !== 'cli') {
-            return;
-        }
-
         if ($desc) {
             $this->desc = $desc;
         }
@@ -150,8 +176,9 @@ class ProgressReporter
         $this->current++;
         $this->ops_current++;
 
-        if ($this->current % $this->interval === 0) {
-            $this->update();
+        $this->update();
+
+        if ($this->renderRequired()) {
             $this->render();
         }
     }
@@ -164,10 +191,6 @@ class ProgressReporter
      */
     public function finish()
     {
-        if ($this->only_cli && PHP_SAPI !== 'cli') {
-            return;
-        }
-
         $this->update();
         $this->render();
         echo PHP_EOL;
@@ -201,6 +224,10 @@ class ProgressReporter
 
     private function render()
     {
+        if ($this->outputDisabled()) {
+            return;
+        }
+
         $pb = $this->getProgress();
 
         echo $this->cl_code;
@@ -222,7 +249,7 @@ class ProgressReporter
             $percent_done = 0;
         }
 
-        $done_chars = min(100, floor($percent_done * $this->width / 100));
+        $done_chars = min(100, ceil($percent_done * $this->width / 100));
         $undone_chars = max(0, $this->width - $done_chars);
 
         $bar = str_repeat("#", $done_chars) . str_repeat(".", $undone_chars);
@@ -244,7 +271,33 @@ class ProgressReporter
 
     private function microToSeconds($microseconds)
     {
-        return $microseconds / 1000000;
+        return $microseconds / self::MICROSECONDS_PER_SECOND;
     }
 
+    private function outputDisabled()
+    {
+        return $this->only_cli && PHP_SAPI !== 'cli';
+    }
+
+    private function renderRequired()
+    {
+        $render = false;
+
+        if ($this->timeout > 0) {
+            if (!$this->timeout_start || $this->timeoutIsUp()) {
+                $this->timeout_start = microtime(true);
+                $render = true;
+            }
+        } else {
+            $render = ($this->current % $this->interval === 0);
+        }
+
+        return $render;
+    }
+
+    private function timeoutIsUp()
+    {
+        $elapsed = microtime(true) - $this->timeout_start;
+        return $elapsed >= $this->timeout;
+    }
 }
