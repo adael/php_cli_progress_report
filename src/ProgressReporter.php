@@ -160,7 +160,7 @@ class ProgressReporter
      */
     public function timeout($timeout)
     {
-        $this->timeout = $timeout / self::MILLISECONDS_PER_SECOND;
+        $this->timeout = $timeout;
     }
 
     /**
@@ -298,6 +298,6 @@ class ProgressReporter
     private function timeoutIsUp()
     {
         $elapsed = microtime(true) - $this->timeout_start;
-        return $elapsed >= $this->timeout;
+        return $elapsed >= ($this->timeout / self::MILLISECONDS_PER_SECOND);
     }
 }
